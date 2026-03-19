@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+ml_model/venv/
+ml_model/.venv/
+ml_model/env/
+ml_model/.env/
+*.egg-info/
+dist/
+build/
+
+# Model files (large binaries - can regenerate)
+# ml_model/models/*.pkl  # Uncomment to exclude trained models
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env.local
+ml_model/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Docker
+.docker/
+
+# Misc
+*.tgz
+.cache/

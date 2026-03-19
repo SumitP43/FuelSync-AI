@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: fuelsync-mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: fuelsync
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ml-service:
+    build:
+      context: ./ml_model
+      dockerfile: Dockerfile
+    container_name: fuelsync-ml
+    restart: unless-stopped
+    ports:
+      - '5001:5001'
+    environment:
+      - ML_PORT=5001
+      - FLASK_DEBUG=false
+      - TRAIN_API_KEY=fuelsync-train-key
+    volumes:
+      - ml_models:/app/models
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fuelsync-backend
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/fuelsync
+      - JWT_SECRET=fuelsync-jwt-secret-change-in-production
+      - JWT_EXPIRES_IN=7d
+      - ML_SERVICE_URL=http://ml-service:5001
+      - FRONTEND_URL=http://localhost:3000
+      - NODE_ENV=production
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fuelsync-frontend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Run seeder after backend is healthy
+  seeder:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fuelsync-seeder
+    command: node src/seed.js
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/fuelsync
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: 'no'
+
+volumes:
+  mongo_data:
+  ml_models:
