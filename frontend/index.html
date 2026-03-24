@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FuelSync-AI — Smart CNG Pump Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <svg class="logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="18" cy="18" r="18" fill="#0f0f23"/>
+      <path d="M18 8C13.03 8 9 12.03 9 17c0 6.5 9 18 9 18s9-11.5 9-18c0-4.97-4.03-9-9-9zm0 12c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" fill="#00d4ff"/>
+    </svg>
+    <h1>FuelSync<span style="color:#7c3aed">AI</span></h1>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" data-section="dashboard">🏠 Dashboard</button>
+    <button class="nav-link" data-section="map-view">🗺️ Map</button>
+    <button class="nav-link" data-section="prices">💰 Prices</button>
+    <button class="nav-link" data-section="alerts">🔔 Alerts</button>
+    <button class="nav-link" data-section="chat">🤖 AI Chat</button>
+  </div>
+  <div class="nav-actions">
+    <span id="user-info" class="hidden" style="color:var(--accent);font-size:0.85rem;font-weight:600"></span>
+    <button id="login-btn" class="btn btn-primary btn-sm" onclick="app?.showAuthModal()">Login</button>
+    <button id="logout-btn" class="btn btn-outline btn-sm hidden" onclick="app?.handleLogout()">Logout</button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="live-badge" style="margin-bottom:1rem">
+    <div class="live-dot"></div> LIVE Updates
+  </div>
+  <h2>Find Your Nearest<br><span>CNG Pump</span> Instantly</h2>
+  <p>Real-time crowd levels, wait times &amp; AI-powered recommendations</p>
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="Search by area, city or pump name…" />
+    <button class="btn btn-primary" onclick="handleSearch()">🔍 Search</button>
+  </div>
+  <div class="filter-pills" style="justify-content:center;margin-top:1rem">
+    <button class="pill active" data-city="Mumbai">Mumbai</button>
+    <button class="pill" data-city="Delhi">Delhi</button>
+    <button class="pill" data-city="Pune">Pune</button>
+    <button class="pill" data-city="Ahmedabad">Ahmedabad</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD SECTION ── -->
+<div id="section-dashboard" class="section" style="display:block">
+  <div class="main-layout">
+
+    <!-- Pump List -->
+    <div class="card" style="grid-column:span 1">
+      <div class="card-header">
+        <span class="card-title">⛽ Nearby CNG Pumps</span>
+        <button class="btn btn-outline btn-sm" onclick="app?.loadPumps()">↻ Refresh</button>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
+        <select id="filter-status" class="form-select" style="flex:1">
+          <option value="">All Status</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+        <input type="text" id="filter-area" class="form-input" placeholder="Filter area…" style="flex:1" />
+        <button id="filter-btn" class="btn btn-outline btn-sm">Filter</button>
+      </div>
+      <div id="pump-list" class="pump-list">
+        <div class="skeleton" style="height:80px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:80px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:80px"></div>
+      </div>
+    </div>
+
+    <!-- Recommendations + Detail -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div class="card recommendation-card">
+        <div class="card-header">
+          <span class="card-title">🤖 AI Recommendations</span>
+          <button class="btn btn-outline btn-sm" onclick="app?.loadRecommendations()">↻</button>
+        </div>
+        <div id="recommendations-list">
+          <div class="skeleton" style="height:90px;margin-bottom:8px"></div>
+          <div class="skeleton" style="height:90px"></div>
+        </div>
+      </div>
+      <div id="pump-detail" class="hidden"></div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Quick Stats</span></div>
+        <div class="stats-grid">
+          <div class="stat-item"><div class="stat-value" id="stat-total-pumps">—</div><div class="stat-label">Total Pumps</div></div>
+          <div class="stat-item"><div class="stat-value" id="stat-open-pumps">—</div><div class="stat-label">Open Now</div></div>
+          <div class="stat-item"><div class="stat-value" id="stat-avg-wait">—</div><div class="stat-label">Avg Wait (min)</div></div>
+          <div class="stat-item"><div class="stat-value" id="stat-cng-price">—</div><div class="stat-label">CNG ₹/kg</div></div>
+        </div>
+      </div>
+      <!-- Mini Price Comparison -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">💰 Fuel Savings</span></div>
+        <div id="price-comparison">
+          <div class="skeleton" style="height:100px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── MAP SECTION ── -->
+<div id="section-map-view" class="section hidden" style="padding:1.5rem;max-width:1400px;margin:0 auto">
+  <div class="section-title">🗺️ <span>Live</span> Map View</div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div id="map" class="map-container"></div>
+  </div>
+</div>
+
+<!-- ── PRICES SECTION ── -->
+<div id="section-prices" class="section hidden" style="padding:1.5rem;max-width:1400px;margin:0 auto">
+  <div class="section-title">💰 CNG <span>Prices</span> Today</div>
+  <div class="main-layout">
+    <div class="card">
+      <div class="card-header"><span class="card-title">All Cities</span></div>
+      <div id="prices-today"><div class="skeleton" style="height:200px"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Fuel Comparison</span></div>
+      <div id="price-comparison-detail"><div class="skeleton" style="height:200px"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ALERTS SECTION ── -->
+<div id="section-alerts" class="section hidden" style="padding:1.5rem;max-width:800px;margin:0 auto">
+  <div class="section-title">🔔 <span>Crowd</span> Alerts</div>
+  <div style="display:grid;gap:1.5rem;grid-template-columns:1fr 1fr">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Your Alerts</span></div>
+      <div id="alerts-list">
+        <p style="color:var(--text-muted);font-size:0.9rem">Log in to manage alerts.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Create Alert</span></div>
+      <div class="alert-form">
+        <div class="form-group">
+          <label class="form-label">Pump</label>
+          <select id="alert-pump" class="form-select">
+            <option value="">Select a pump…</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notify when crowd drops below</label>
+          <select id="alert-threshold" class="form-select">
+            <option value="low">Low (≤30%)</option>
+            <option value="medium">Medium (≤60%)</option>
+            <option value="high">High (≤80%)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="createAlertFromForm()">🔔 Create Alert</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHAT SECTION ── -->
+<div id="section-chat" class="section hidden" style="padding:1.5rem;max-width:800px;margin:0 auto">
+  <div class="section-title">🤖 <span>AI</span> Assistant</div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Chat with FuelSync AI</span>
+      <button id="chat-clear" class="btn btn-outline btn-sm">🗑 Clear</button>
+    </div>
+    <div class="chat-container">
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" class="form-input" placeholder="Ask about CNG pumps, prices, tips…" />
+        <button id="chat-send" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal-overlay hidden" onclick="if(event.target===this)app?.hideAuthModal()">
+  <div class="modal">
+    <div class="tabs">
+      <button class="tab active" onclick="showAuthTab('login')">Login</button>
+      <button class="tab" onclick="showAuthTab('register')">Register</button>
+    </div>
+    <!-- Login -->
+    <form id="login-form" onsubmit="app?.handleLogin(event)">
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label">Email</label>
+        <input id="login-email" type="email" class="form-input" required placeholder="you@example.com" />
+      </div>
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label">Password</label>
+        <input id="login-password" type="password" class="form-input" required placeholder="••••••••" />
+      </div>
+      <p id="login-error" style="color:var(--accent-red);font-size:0.82rem;margin-bottom:0.5rem"></p>
+      <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+    </form>
+    <!-- Register -->
+    <form id="register-form" class="hidden" onsubmit="app?.handleRegister(event)">
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label">Full Name</label>
+        <input id="reg-name" type="text" class="form-input" required placeholder="John Doe" />
+      </div>
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label">Email</label>
+        <input id="reg-email" type="email" class="form-input" required placeholder="you@example.com" />
+      </div>
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label">Password</label>
+        <input id="reg-password" type="password" class="form-input" required placeholder="Min 8 characters" />
+      </div>
+      <p id="reg-error" style="color:var(--accent-red);font-size:0.82rem;margin-bottom:0.5rem"></p>
+      <button type="submit" class="btn btn-primary" style="width:100%">Create Account</button>
+    </form>
+    <button onclick="app?.hideAuthModal()" style="margin-top:1rem;width:100%;background:none;border:none;color:var(--text-muted);cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" class="toast-container"></div>
+
+<footer>
+  <p>⛽ FuelSync-AI — Smart CNG Pump Finder powered by FastAPI &amp; Claude AI</p>
+  <p style="margin-top:0.25rem">Real-time data for Mumbai, Delhi &amp; Pune | WebSocket Live Updates</p>
+</footer>
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/map.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/main.js"></script>
+<script>
+  function showAuthTab(tab) {
+    document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+    document.querySelectorAll('.modal .tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register')));
+  }
+
+  function handleSearch() {
+    const q = document.getElementById('search-input')?.value?.trim();
+    if (!q) return;
+    const filtered = window.app?.pumps?.filter(p =>
+      p.name.toLowerCase().includes(q.toLowerCase()) ||
+      p.area.toLowerCase().includes(q.toLowerCase()) ||
+      p.city.toLowerCase().includes(q.toLowerCase())
+    ) || [];
+    window.app?.renderPumpList(filtered);
+    if (!filtered.length) showToast('No pumps found for: ' + q, 'info');
+  }
+
+  document.getElementById('search-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSearch();
+  });
+
+  function createAlertFromForm() {
+    if (!window.app?.currentUser) { window.app?.showAuthModal(); return; }
+    const pumpId = document.getElementById('alert-pump')?.value;
+    const threshold = document.getElementById('alert-threshold')?.value;
+    if (!pumpId) { showToast('Please select a pump', 'error'); return; }
+    api.createAlert(pumpId, threshold)
+      .then(() => { showToast('Alert created!', 'success'); window.app?.loadAlerts(); })
+      .catch(err => showToast(err.message, 'error'));
+  }
+
+  // Populate alert pump dropdown after app loads
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const select = document.getElementById('alert-pump');
+      if (select && window.app?.pumps?.length) {
+        window.app.pumps.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} — ${p.area}`;
+          select.appendChild(opt);
+        });
+      }
+    }, 3000);
+  });
+
+  // Update quick stats
+  function updateStats(pumps, price) {
+    const el = id => document.getElementById(id);
+    if (el('stat-total-pumps')) el('stat-total-pumps').textContent = pumps?.length || 0;
+    if (el('stat-open-pumps')) el('stat-open-pumps').textContent = pumps?.filter(p => p.status === 'open').length || 0;
+    const avgWait = pumps?.length ? Math.round(pumps.reduce((s, p) => s + (p.current_crowd_level / 5 + 2), 0) / pumps.length) : 0;
+    if (el('stat-avg-wait')) el('stat-avg-wait').textContent = avgWait || '—';
+    if (el('stat-cng-price')) el('stat-cng-price').textContent = price || '79.0';
+  }
+
+  // Hook into app after load
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      if (window.app) {
+        const price = await api.getPriceComparison('Mumbai').catch(() => null);
+        updateStats(window.app.pumps, price?.cng_per_kg);
+        // Populate prices section comparison detail
+        const compDetail = document.getElementById('price-comparison-detail');
+        if (compDetail && price) {
+          compDetail.innerHTML = document.getElementById('price-comparison')?.innerHTML || '';
+        }
+      }
+    }, 4000);
+  });
+</script>
+</body>
+</html>
