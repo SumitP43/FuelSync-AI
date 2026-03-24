@@ -21,7 +21,7 @@ class QueuePredictor:
         if utilization >= 0.95:
             return effective_vehicles * service_time * 2
         wait = (service_time * utilization) / (2 * (1 - utilization)) + service_time
-        return round(max(1.0, min(wait * (effective_vehicles / max(effective_vehicles, 1)), 90.0)), 1)
+        return round(max(1.0, min(wait * effective_vehicles, 90.0)), 1)
 
     def estimate_queue_length(self, crowd_level: int, max_capacity: int) -> int:
         """Estimate number of vehicles in queue from crowd level and capacity."""

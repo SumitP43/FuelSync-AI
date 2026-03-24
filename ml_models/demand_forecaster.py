@@ -1,6 +1,10 @@
 """Demand forecasting model for CNG pumps."""
 from typing import List, Dict
 
+BASE_DEMAND = 50
+PUMP_VARIATION_RANGE = 20
+PUMP_VARIATION_OFFSET = 10
+
 
 class DemandForecaster:
     """Forecasts future demand at CNG pumps."""
@@ -28,7 +32,7 @@ class DemandForecaster:
         """
         from datetime import datetime, timedelta
         now = datetime.utcnow()
-        pump_base = 50 + (hash(str(pump_id)) % 20) - 10  # pump-specific base demand
+        pump_base = BASE_DEMAND + (hash(str(pump_id)) % PUMP_VARIATION_RANGE) - PUMP_VARIATION_OFFSET
         forecasts = []
         for i in range(hours_ahead):
             future = now + timedelta(hours=i)

@@ -2,6 +2,9 @@
 import math
 from typing import List, Dict, Tuple
 
+PUMP_VARIATION_RANGE = 20
+PUMP_VARIATION_OFFSET = 10
+
 
 class CongestionPredictor:
     """Predicts CNG pump congestion levels based on time patterns."""
@@ -20,14 +23,14 @@ class CongestionPredictor:
         base = self.HOURLY_BASE[hour % 24]
         multiplier = self.DAY_MULTIPLIERS[day_of_week % 7]
         # Add a pump-specific variation based on pump_id hash
-        pump_variation = (hash(str(pump_id)) % 20) - 10  # -10 to +10
+        pump_variation = (hash(str(pump_id)) % PUMP_VARIATION_RANGE) - PUMP_VARIATION_OFFSET
         congestion = int(base * multiplier) + pump_variation
         return max(0, min(100, congestion))
 
     def get_hourly_pattern(self, pump_id: str) -> List[Dict]:
         """Return 24-hour congestion pattern for a pump (using weekday average)."""
         avg_multiplier = sum(self.DAY_MULTIPLIERS) / len(self.DAY_MULTIPLIERS)
-        pump_variation = (hash(str(pump_id)) % 20) - 10
+        pump_variation = (hash(str(pump_id)) % PUMP_VARIATION_RANGE) - PUMP_VARIATION_OFFSET
         return [
             {
                 "hour": h,
