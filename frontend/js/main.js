@@ -353,7 +353,8 @@ class FuelSyncApp {
 
   setupWebSocket() {
     try {
-      const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8000/ws/pumps/live`;
+      const wsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+      const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${wsHost}/ws/pumps/live`;
       this.ws = new WebSocket(wsUrl);
       this.ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
