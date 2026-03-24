@@ -1,4 +1,5 @@
 """Authentication dependencies for FastAPI routes."""
+import uuid as uuid_module
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -8,6 +9,14 @@ from backend.auth.jwt_handler import verify_token
 from backend.models.user import User, UserRole
 
 security = HTTPBearer()
+
+
+def _parse_uuid(value: str):
+    """Parse string to UUID, return original string if parsing fails."""
+    try:
+        return uuid_module.UUID(value)
+    except (ValueError, AttributeError):
+        return value
 
 
 def get_current_user(
@@ -28,7 +37,7 @@ def get_current_user(
     if user_id is None:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == _parse_uuid(user_id)).first()
     if user is None:
         raise credentials_exception
     return user

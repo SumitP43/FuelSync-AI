@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ENVIRONMENT: str = "production"
 
-    # Security
-    SECRET_KEY: str
+    # Security — override in production with a strong random key
+    SECRET_KEY: str = "dev-secret-key-change-this-in-production-min-32-chars!"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

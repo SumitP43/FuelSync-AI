@@ -50,8 +50,16 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        # Coerce UUID → str before Pydantic validation
+        if hasattr(obj, "__dict__"):
+            data = {k: (str(v) if hasattr(v, "hex") else v) for k, v in obj.__dict__.items() if not k.startswith("_")}
+            data["role"] = obj.role.value if hasattr(obj.role, "value") else str(obj.role)
+            return cls(**data)
+        return super().model_validate(obj, **kwargs)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -102,13 +110,18 @@ def refresh_token(payload: TokenRefresh, db: Session = Depends(get_db)):
     if not data:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     user_id = data.get("sub")
-    user = db.query(User).filter(User.id == user_id).first()
+    import uuid as uuid_module
+    try:
+        uid = uuid_module.UUID(user_id)
+    except (ValueError, AttributeError):
+        uid = user_id
+    user = db.query(User).filter(User.id == uid).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
     token = create_access_token({"sub": str(user.id), "role": user.role.value})
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me")
 def get_me(current_user: User = Depends(get_current_active_user)):
-    return current_user
+    return UserOut.model_validate(current_user).model_dump()

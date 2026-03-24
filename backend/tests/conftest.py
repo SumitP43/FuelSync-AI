@@ -53,14 +53,14 @@ def admin_token(client, db):
     import bcrypt
     hashed = bcrypt.hashpw(b"AdminPass123!", bcrypt.gensalt()).decode()
     admin = User(
-        email="admin@fuelsync.test",
+        email="admin@fuelsync-test.com",
         password_hash=hashed,
         name="Admin User",
         role=UserRole.ADMIN,
     )
     db.add(admin)
     db.commit()
-    resp = client.post("/api/auth/login", json={"email": "admin@fuelsync.test", "password": "AdminPass123!"})
+    resp = client.post("/api/auth/login", json={"email": "admin@fuelsync-test.com", "password": "AdminPass123!"})
     return resp.json()["access_token"]
 
 
@@ -69,7 +69,7 @@ def user_token(client, db):
     """Create a regular user and return JWT token."""
     resp = client.post(
         "/api/auth/register",
-        json={"email": "user@fuelsync.test", "password": "UserPass123!", "name": "Test User"},
+        json={"email": "user@fuelsync-test.com", "password": "UserPass123!", "name": "Test User"},
     )
     return resp.json()["access_token"]
 
