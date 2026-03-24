@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+pip-log.txt
+.eggs/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Database
+*.sqlite3
+*.db
+
+# Docker
+docker/data/
+
+# Logs
+logs/
+*.log
+
+# Node (frontend)
+node_modules/
+package-lock.json
+
+# Distribution
+dist/
+*.tar.gz
+
+# ML Models (saved weights)
+ml_models/saved/
+*.pkl
+*.joblib
+*.h5
+
+# Alembic
+alembic/versions/
+
+# Temporary
+tmp/
+temp/
