@@ -1,4 +1,5 @@
 """Smart CNG pump recommendation engine."""
+import math
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from backend.models.pump import CngPump, PumpStatus
@@ -63,7 +64,18 @@ def get_recommendations(
     preferences: Optional[Dict[str, Any]] = None,
 ) -> List[dict]:
     """Return ranked pump recommendations for a given user location."""
-    pumps = db.query(CngPump).filter(CngPump.status == PumpStatus.OPEN).all()
+    # Bounding box pre-filter before haversine to avoid full table scan
+    lat_delta = radius_km / 111.0
+    lng_delta = radius_km / (111.0 * math.cos(math.radians(lat)))
+    pumps = (
+        db.query(CngPump)
+        .filter(
+            CngPump.status == PumpStatus.OPEN,
+            CngPump.latitude.between(lat - lat_delta, lat + lat_delta),
+            CngPump.longitude.between(lng - lng_delta, lng + lng_delta),
+        )
+        .all()
+    )
     scored = []
     for pump in pumps:
         dist = haversine_distance(lat, lng, pump.latitude, pump.longitude)

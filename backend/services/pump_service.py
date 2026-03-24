@@ -1,4 +1,5 @@
 """Pump business logic service."""
+import math
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -64,7 +65,18 @@ def get_nearby_pumps(
     radius_km: float = 5.0,
     limit: int = 10,
 ) -> List[dict]:
-    pumps = db.query(CngPump).filter(CngPump.status == PumpStatus.OPEN).all()
+    # Bounding box pre-filter (1 degree latitude ≈ 111 km)
+    lat_delta = radius_km / 111.0
+    lng_delta = radius_km / (111.0 * math.cos(math.radians(lat)))
+    pumps = (
+        db.query(CngPump)
+        .filter(
+            CngPump.status == PumpStatus.OPEN,
+            CngPump.latitude.between(lat - lat_delta, lat + lat_delta),
+            CngPump.longitude.between(lng - lng_delta, lng + lng_delta),
+        )
+        .all()
+    )
     results = []
     for pump in pumps:
         dist = haversine_distance(lat, lng, pump.latitude, pump.longitude)

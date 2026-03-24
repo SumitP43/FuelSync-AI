@@ -16,7 +16,7 @@ THRESHOLD_CROWD_MAP = {
 def check_and_trigger_alerts(db: Session, pump: CngPump) -> List[Alert]:
     """Check all active alerts for a pump and trigger those that meet threshold."""
     triggered = []
-    alerts = db.query(Alert).filter(Alert.pump_id == pump.id, Alert.is_active == True).all()
+    alerts = db.query(Alert).filter(Alert.pump_id == pump.id, Alert.is_active.is_(True)).all()
     for alert in alerts:
         threshold_value = THRESHOLD_CROWD_MAP.get(alert.threshold, 30)
         if pump.current_crowd_level <= threshold_value:
@@ -31,7 +31,7 @@ def get_user_triggered_alerts(db: Session, user_id: str) -> List[dict]:
     """Get recently triggered alerts for a user."""
     alerts = (
         db.query(Alert)
-        .filter(Alert.user_id == user_id, Alert.is_active == True, Alert.last_triggered != None)
+        .filter(Alert.user_id == user_id, Alert.is_active.is_(True), Alert.last_triggered.is_not(None))
         .order_by(Alert.last_triggered.desc())
         .limit(20)
         .all()

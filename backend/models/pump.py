@@ -59,7 +59,7 @@ class PumpPrice(Base):
     pump_id = Column(UUID(as_uuid=True), ForeignKey("cng_pumps.id"), nullable=False)
     city = Column(String(100), nullable=False, index=True)
     price_per_kg = Column(Float, nullable=False)
-    date = Column(Date, default=datetime.utcnow().date)
+    date = Column(Date, default=lambda: datetime.utcnow().date())
     trend = Column(SAEnum(PriceTrend), default=PriceTrend.STABLE)
     created_at = Column(DateTime, default=datetime.utcnow)
 
