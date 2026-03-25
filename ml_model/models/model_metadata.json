@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-03-19T16:02:22.784439",
+  "trained_at": "2026-03-25T18:01:50.949376",
   "feature_columns": [
     "hour",
     "day_of_week",
