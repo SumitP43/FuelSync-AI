@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-fuel-dark text-zinc-100;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-600;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/50;
+  }
+
+  .glass-strong {
+    @apply bg-zinc-900/80 backdrop-blur-2xl border border-zinc-700/50;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-fuel-green/5;
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15), 0 0 60px rgba(34, 197, 94, 0.05);
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(132, 204, 22, 0.1), transparent);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+
+  .skeleton {
+    @apply animate-shimmer bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800;
+    background-size: 200% 100%;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl 
+           bg-fuel-green text-white font-semibold text-sm 
+           hover:bg-green-400 active:scale-[0.97] transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl 
+           bg-zinc-800 text-zinc-200 font-medium text-sm border border-zinc-700
+           hover:bg-zinc-700 hover:border-zinc-600 active:scale-[0.97] transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-xl bg-zinc-800/80 border border-zinc-700 
+           text-white placeholder-zinc-500 text-sm
+           focus:outline-none focus:ring-2 focus:ring-fuel-green/30 focus:border-fuel-green/50
+           transition-all duration-200;
+  }
+}
+
+/* Leaflet Map overrides */
+.leaflet-container {
+  background-color: #18181b !important; /* zinc-900 */
+}
+
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+}
+
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+.custom-popup {
+  margin-bottom: 20px !important;
+}
+
+.custom-pump-marker {
+  background: transparent !important;
+  border: none !important;
+}
