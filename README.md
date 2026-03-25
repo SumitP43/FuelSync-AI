@@ -261,6 +261,15 @@ FuelSync AI combines ML predictions + community data + smart scoring to solve a 
 
 ---
 
+## 👥 Contributors
+
+| Name | Role |
+|------|------|
+| [Sumit](https://github.com/SumitP43) | Project Lead |
+| Krish | Contributor |
+
+---
+
 ## 📄 License
 
 MIT © 2024 FuelSync AI Team
