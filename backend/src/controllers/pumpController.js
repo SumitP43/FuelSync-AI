@@ -73,7 +73,14 @@ exports.updatePump = asyncHandler(async (req, res) => {
 
   const redis = getRedis();
   if (redis) {
-    const keys = await redis.keys('nearby:*');
+    // Use SCAN instead of KEYS to avoid blocking the Redis event loop
+    const keys = [];
+    let cursor = '0';
+    do {
+      const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', 'nearby:*', 'COUNT', 100);
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== '0');
     if (keys.length) await redis.del(...keys);
   }
 
