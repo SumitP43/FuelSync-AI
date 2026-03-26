@@ -15,3 +15,18 @@ exports.getRecommendations = asyncHandler(async (req, res) => {
 
   res.json({ success: true, ...result });
 });
+
+/**
+ * POST /api/recommendations/record-choice
+ * Body: { pumpId, rank }
+ * Records which pump the authenticated user selected so the AI can
+ * improve future recommendations (self-learning).
+ */
+exports.recordChoice = asyncHandler(async (req, res) => {
+  const { pumpId, rank } = req.body;
+  if (!pumpId || !rank) {
+    return res.status(400).json({ success: false, message: 'pumpId and rank are required' });
+  }
+  await aiService.recordChoice(req.user._id, pumpId, rank);
+  res.json({ success: true, message: 'Choice recorded' });
+});

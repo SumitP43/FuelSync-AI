@@ -1,6 +1,7 @@
 const Pump = require('../models/Pump');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { getRedis } = require('../config/redis');
+const mapsService = require('../services/googleMapsService');
 const logger = require('../utils/logger');
 
 exports.getNearbyPumps = asyncHandler(async (req, res) => {
@@ -29,7 +30,29 @@ exports.getNearbyPumps = asyncHandler(async (req, res) => {
     { $limit: Number(limit) },
   ]);
 
-  const payload = { count: pumps.length, pumps };
+  // Enrich with real drive distance/duration from Google Distance Matrix when available
+  if (mapsService.isAvailable() && pumps.length > 0) {
+    const destinations = pumps.map((p) => ({
+      lat: p.location.coordinates[1],
+      lng: p.location.coordinates[0],
+    }));
+    const matrix = await mapsService.getDistanceMatrix(
+      { lat: parseFloat(lat), lng: parseFloat(lng) },
+      destinations
+    );
+    if (matrix) {
+      matrix.forEach((entry, i) => {
+        if (entry) {
+          pumps[i].driveDistanceKm = entry.distanceKm;
+          pumps[i].driveDurationMin = entry.durationMin;
+          pumps[i].driveDistanceText = entry.distanceText;
+          pumps[i].driveDurationText = entry.durationText;
+        }
+      });
+    }
+  }
+
+  const payload = { count: pumps.length, mapsEnriched: mapsService.isAvailable(), pumps };
   if (redis) await redis.setex(cacheKey, 60, JSON.stringify(payload));
   res.json({ success: true, ...payload });
 });
@@ -71,9 +94,9 @@ exports.updatePump = asyncHandler(async (req, res) => {
   const pump = await Pump.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
   if (!pump) return res.status(404).json({ success: false, message: 'Pump not found' });
 
+  // Invalidate nearby cache using non-blocking SCAN
   const redis = getRedis();
   if (redis) {
-    // Use SCAN instead of KEYS to avoid blocking the Redis event loop
     const keys = [];
     let cursor = '0';
     do {
@@ -84,8 +107,15 @@ exports.updatePump = asyncHandler(async (req, res) => {
     if (keys.length) await redis.del(...keys);
   }
 
+  // Emit real-time update
   const io = req.app.get('io');
-  if (io) io.to(`pump:${pump._id}`).emit('fuelUpdated', { pumpId: pump._id, fuelAvailabilityPercent: pump.fuelAvailabilityPercent, queueLength: pump.queueLength });
+  if (io) {
+    io.to(`pump:${pump._id}`).emit('fuelUpdated', {
+      pumpId: pump._id,
+      fuelAvailabilityPercent: pump.fuelAvailabilityPercent,
+      queueLength: pump.queueLength,
+    });
+  }
 
   res.json({ success: true, pump });
 });
@@ -94,4 +124,32 @@ exports.deletePump = asyncHandler(async (req, res) => {
   const pump = await Pump.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
   if (!pump) return res.status(404).json({ success: false, message: 'Pump not found' });
   res.json({ success: true, message: 'Pump deactivated' });
+});
+
+/**
+ * GET /api/pumps/:id/directions?lat=...&lng=...
+ * Returns Google Maps turn-by-turn directions from the user's location to the pump.
+ */
+exports.getDirections = asyncHandler(async (req, res) => {
+  const { lat, lng } = req.query;
+  if (!lat || !lng) return res.status(400).json({ success: false, message: 'lat and lng are required' });
+
+  if (!mapsService.isAvailable()) {
+    return res.status(503).json({ success: false, message: 'Google Maps integration is not configured' });
+  }
+
+  const pump = await Pump.findById(req.params.id);
+  if (!pump) return res.status(404).json({ success: false, message: 'Pump not found' });
+
+  const [pumpLng, pumpLat] = pump.location.coordinates;
+  const directions = await mapsService.getDirections(
+    { lat: parseFloat(lat), lng: parseFloat(lng) },
+    { lat: pumpLat, lng: pumpLng }
+  );
+
+  if (!directions) {
+    return res.status(502).json({ success: false, message: 'Could not retrieve directions from Google Maps' });
+  }
+
+  res.json({ success: true, pump: { id: pump._id, name: pump.name, address: pump.address }, directions });
 });
