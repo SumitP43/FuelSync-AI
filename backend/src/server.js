@@ -1,77 +1,69 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const helmet = require('helmet');
+const cors = require('cors');
 const morgan = require('morgan');
+const passport = require('./config/passport');
+
 const connectDB = require('./config/database');
+const { connectRedis } = require('./config/redis');
+const logger = require('./utils/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { defaultLimiter } = require('./middleware/rateLimiter');
+const initSocket = require('./sockets');
 
-// Routes
-const pumpsRouter = require('./routes/pumps');
-const predictionsRouter = require('./routes/predictions');
-const recommendationsRouter = require('./routes/recommendations');
-const feedbackRouter = require('./routes/feedback');
-const crowdReportsRouter = require('./routes/crowd-reports');
-const authRouter = require('./routes/auth');
+const startExpireJob = require('./jobs/expireBookings');
+const startPredictionJob = require('./jobs/updatePredictions');
+const startDailyAnalyticsJob = require('./jobs/dailyAnalytics');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: process.env.CLIENT_URL || '*', methods: ['GET', 'POST'] },
+});
 
-// Security & request parsing
+app.set('io', io);
+
 app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
+app.use(passport.initialize());
 
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
-}
-
-// Rate limiting
 app.use('/api', defaultLimiter);
 
-// API Routes
-app.use('/api/pumps', pumpsRouter);
-app.use('/api/predictions', predictionsRouter);
-app.use('/api/prediction-graph', predictionsRouter); // alias
-app.use('/api/recommendations', recommendationsRouter);
-app.use('/api/feedback', feedbackRouter);
-app.use('/api/crowd-report', crowdReportsRouter);
-app.use('/api/auth', authRouter);
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/pumps', require('./routes/pumps'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/recommendations', require('./routes/recommendations'));
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications'));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'FuelSync-AI Backend',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-  });
-});
+app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
-});
+app.use((_req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 
-// Global error handler
 app.use(errorHandler);
 
-// Start server
-const PORT = parseInt(process.env.PORT || '5000');
+initSocket(io);
 
-if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 FuelSync-AI Backend running on port ${PORT}`);
-    });
-  });
-}
+const PORT = process.env.PORT || 5000;
+const start = async () => {
+  await connectDB();
+  connectRedis();
+  startExpireJob();
+  startPredictionJob();
+  startDailyAnalyticsJob();
+  server.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+};
 
-module.exports = app;
+start().catch((err) => {
+  logger.error(`Server startup error: ${err.message}`);
+  process.exit(1);
+});
+
+module.exports = { app, server };

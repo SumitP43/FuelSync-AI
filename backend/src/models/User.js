@@ -1,22 +1,36 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, unique: true, trim: true, minlength: 3 },
+    name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password_hash: { type: String, required: true },
-    favorite_pumps: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pump' }],
-    preferences: {
-      max_distance_km: { type: Number, default: 10 },
-      preferred_city: { type: String },
-      notifications_enabled: { type: Boolean, default: true },
-    },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    is_active: { type: Boolean, default: true },
-    last_login: { type: Date },
+    password: { type: String, select: false },
+    googleId: { type: String },
+    role: { type: String, enum: ['user', 'admin', 'pump_owner'], default: 'user' },
+    refreshTokens: [{ type: String, select: false }],
+    fcmToken: { type: String },
+    isActive: { type: Boolean, default: true },
+    lastLogin: { type: Date },
+    choiceHistory: [
+      {
+        pumpId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pump' },
+        recommendedRank: Number,
+        chosenAt: { type: Date, default: Date.now },
+      },
+    ],
   },
-  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+  { timestamps: true }
 );
 
-const User = mongoose.model('User', userSchema);
-module.exports = User;
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password') || !this.password) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function (candidate) {
+  return bcrypt.compare(candidate, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);

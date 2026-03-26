@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { asyncHandler } = require('../middleware/errorHandler');
-const { getRecommendations } = require('../controllers/recommendationController');
+const ctrl = require('../controllers/recommendationController');
+const { optionalAuth } = require('../middleware/auth');
 
-router.get('/', asyncHandler(getRecommendations));
+router.get('/', optionalAuth, ctrl.getRecommendations);
 
 module.exports = router;

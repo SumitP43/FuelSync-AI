@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { asyncHandler } = require('../middleware/errorHandler');
-const { getNearbyPumps, getPumpById, getAllPumps } = require('../controllers/pumpController');
+const ctrl = require('../controllers/pumpController');
+const { protect, authorize } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { schemas } = require('../middleware/validate');
 
-router.get('/', asyncHandler(getAllPumps));
-router.get('/nearby', asyncHandler(getNearbyPumps));
-router.get('/:id', asyncHandler(getPumpById));
+router.get('/', ctrl.getAllPumps);
+router.get('/nearby', ctrl.getNearbyPumps);
+router.get('/:id', ctrl.getPumpById);
+router.post('/', protect, authorize('admin', 'pump_owner'), validate(schemas.createPump), ctrl.createPump);
+router.put('/:id', protect, authorize('admin', 'pump_owner'), ctrl.updatePump);
+router.delete('/:id', protect, authorize('admin'), ctrl.deletePump);
 
 module.exports = router;
