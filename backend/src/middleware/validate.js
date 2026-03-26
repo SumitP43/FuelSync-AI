@@ -11,7 +11,7 @@ const validate = (schema, source = 'body') => (req, res, next) => {
 
 module.exports = validate;
 
-const Joi_id = Joi.string().hex().length(24);
+const joiId = Joi.string().hex().length(24);
 
 module.exports.schemas = {
   register: Joi.object({
@@ -39,14 +39,14 @@ module.exports.schemas = {
     }),
   }),
   createBooking: Joi.object({
-    pumpId: Joi_id.required(),
+    pumpId: joiId.required(),
     slotDate: Joi.date().iso().greater('now').required(),
     slotHour: Joi.number().integer().min(0).max(23).required(),
     vehicleNumber: Joi.string(),
     notes: Joi.string().max(500),
   }),
   createReview: Joi.object({
-    pumpId: Joi_id.required(),
+    pumpId: joiId.required(),
     rating: Joi.number().integer().min(1).max(5).required(),
     comment: Joi.string().max(1000),
   }),

@@ -27,6 +27,7 @@ const seed = async () => {
 
   await Pump.insertMany(pumps.map((p) => ({ ...p, ownerId: owner._id })));
   console.log('✅ Seed complete');
+  await mongoose.disconnect();
   process.exit(0);
 };
 
