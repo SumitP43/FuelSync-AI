@@ -1,70 +1,75 @@
-import { formatDistance, formatWaitTime, formatRating, getCrowdInfo } from '../utils/helpers';
-import CrowdIndicator from './CrowdIndicator';
+import Link from 'next/link';
 
-const PumpCard = ({ pump, onClick, isSelected = false, rank = null }) => {
-  const crowd = getCrowdInfo(pump.current_crowd_level || pump.crowd_level || 2);
-  const waitMinutes = pump.predicted_wait || pump.historical_avg_wait;
+function getCrowdBadge(level) {
+  const map = {
+    low: { text: 'Low Crowd', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    medium: { text: 'Moderate', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    high: { text: 'High Crowd', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  };
+  return map[level] || map.medium;
+}
+
+function getStatusDot(status) {
+  return status === 'open' ? 'bg-emerald-400' : 'bg-red-400';
+}
+
+export default function PumpCard({ pump, index = 0 }) {
+  const crowd = getCrowdBadge(pump.crowdLevel);
 
   return (
-    <div
-      onClick={() => onClick?.(pump)}
-      className={`card-hover p-4 transition-all duration-200 ${
-        isSelected ? 'border-green-500 shadow-green-500/20 shadow-lg' : ''
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {rank && (
-              <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                #{rank}
-              </span>
-            )}
-            <h3 className="font-semibold text-white text-sm leading-tight truncate">
-              {pump.name}
-            </h3>
+    <Link href={`/pump/${pump.id}`}>
+      <div
+        className="group glass rounded-2xl p-5 card-hover cursor-pointer animate-fade-in"
+        style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}
+      >
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`w-2 h-2 rounded-full ${getStatusDot(pump.status)} shrink-0`} />
+              <h3 className="font-semibold text-white text-sm truncate group-hover:text-fuel-green transition-colors">
+                {pump.name}
+              </h3>
+            </div>
+            <p className="text-zinc-500 text-xs truncate">{pump.address}</p>
           </div>
-          <p className="text-slate-400 text-xs truncate mb-2">{pump.address}</p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <CrowdIndicator level={pump.current_crowd_level || pump.crowd_level || 2} size="sm" />
-
-            {pump.distance !== undefined && (
-              <span className="text-slate-300 text-xs flex items-center gap-1">
-                📍 {formatDistance(pump.distance)}
-              </span>
-            )}
-
-            <span className="text-slate-300 text-xs flex items-center gap-1">
-              ⏱ {formatWaitTime(waitMinutes)}
-            </span>
-
-            {pump.average_rating > 0 && (
-              <span className="text-yellow-400 text-xs flex items-center gap-1">
-                ⭐ {formatRating(pump.average_rating)}
-              </span>
-            )}
+          <div className={`badge border ${crowd.color} shrink-0`}>
+            {crowd.text}
           </div>
-
-          {pump.reason && (
-            <p className="text-green-400 text-xs mt-2 italic">✨ {pump.reason}</p>
-          )}
         </div>
 
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {pump.amenities?.washroom && (
-            <span className="text-slate-500 text-xs">🚻</span>
-          )}
-          {pump.amenities?.shop && (
-            <span className="text-slate-500 text-xs">🏪</span>
-          )}
-          {pump.amenities?.atm && (
-            <span className="text-slate-500 text-xs">🏧</span>
-          )}
+        {/* Stats grid */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Distance</p>
+            <p className="text-white font-semibold text-sm">{pump.distance} km</p>
+          </div>
+          <div>
+            <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Wait</p>
+            <p className="text-white font-semibold text-sm">{pump.waitingTime} min</p>
+          </div>
+          <div>
+            <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Price</p>
+            <p className="text-white font-semibold text-sm">₹{pump.price}</p>
+          </div>
+          <div>
+            <p className="text-zinc-500 text-[10px] uppercase tracking-wider mb-0.5">Rating</p>
+            <p className="text-white font-semibold text-sm flex items-center gap-0.5">
+              ⭐ {pump.rating}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800/50">
+          <span className="text-zinc-600 text-[10px]">
+            Updated {pump.lastUpdated}
+          </span>
+          <span className="text-fuel-green text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            View Details →
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
-};
-
-export default PumpCard;
+}

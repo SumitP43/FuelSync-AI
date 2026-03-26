@@ -1,128 +1,98 @@
-import { useEffect, useRef } from 'react';
-import { getCrowdInfo } from '../utils/helpers';
+'use client';
 
-const Map = ({ location, pumps = [], selectedPump, onPumpClick }) => {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  const userMarkerRef = useRef(null);
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { pumps } from '../data/pumps';
+import L from 'leaflet';
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || !location) return;
+// Fix for default marker icons not showing in Leaflet with webpack/Next.js
+const customIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
-    // Dynamically import Leaflet to avoid SSR issues
-    import('leaflet').then((L) => {
-      // Fix default icon paths
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      });
+// Custom pump icon using a div icon for better styling
+const createPumpIcon = (status, crowdLevel) => {
+  let colorClass = 'bg-zinc-600'; // closed
+  if (status === 'open') {
+    if (crowdLevel === 'low') colorClass = 'bg-fuel-green';
+    else if (crowdLevel === 'medium') colorClass = 'bg-yellow-500';
+    else colorClass = 'bg-red-500';
+  }
 
-      if (!mapInstanceRef.current && mapRef.current) {
-        const map = L.map(mapRef.current, {
-          center: [location.lat, location.lng],
-          zoom: 13,
-          zoomControl: true,
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(map);
-
-        mapInstanceRef.current = map;
-      }
-
-      const map = mapInstanceRef.current;
-
-      // User location marker
-      if (userMarkerRef.current) userMarkerRef.current.remove();
-      const userIcon = L.divIcon({
-        html: `<div style="width:16px;height:16px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 0 10px rgba(34,197,94,0.8)"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-        className: '',
-      });
-      userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
-        .addTo(map)
-        .bindPopup('<div style="color:#0f172a;font-weight:600">📍 Your Location</div>');
-
-      // Clear existing pump markers
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-
-      // Add pump markers
-      pumps.forEach((pump) => {
-        const info = getCrowdInfo(pump.current_crowd_level || pump.crowd_level || 2);
-        const isSelected = selectedPump?._id === pump._id;
-        const size = isSelected ? 20 : 14;
-
-        const icon = L.divIcon({
-          html: `<div style="width:${size}px;height:${size}px;background:${info.color};border:${isSelected ? 3 : 2}px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);transition:all 0.2s"></div>`,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-          className: '',
-        });
-
-        const marker = L.marker([pump.latitude, pump.longitude], { icon })
-          .addTo(map)
-          .bindPopup(
-            `<div style="color:#0f172a;min-width:180px">
-              <div style="font-weight:700;margin-bottom:4px">${pump.name}</div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px">${pump.address}</div>
-              <div style="display:flex;gap:8px;font-size:12px">
-                <span style="background:${info.color}22;color:${info.color};padding:2px 8px;border-radius:99px;font-weight:600">${info.label}</span>
-                ${pump.distance ? `<span>📍 ${pump.distance} km</span>` : ''}
-              </div>
-            </div>`
-          )
-          .on('click', () => onPumpClick?.(pump));
-
-        markersRef.current.push(marker);
-      });
-
-      // Pan to selected pump
-      if (selectedPump) {
-        map.setView([selectedPump.latitude, selectedPump.longitude], 15, { animate: true });
-      }
-    });
-  }, [location, pumps, selectedPump, onPumpClick]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
-
-  return (
-    <div className="relative w-full h-full">
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        crossOrigin=""
-      />
-      <div ref={mapRef} className="w-full h-full rounded-xl" style={{ minHeight: '300px' }} />
-
-      {/* Legend */}
-      <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur rounded-lg p-2 text-xs space-y-1 z-10">
-        <div className="flex items-center gap-1.5 text-slate-300">
-          <div className="w-3 h-3 rounded-full bg-green-500" /> Low
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-300">
-          <div className="w-3 h-3 rounded-full bg-yellow-500" /> Medium
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-300">
-          <div className="w-3 h-3 rounded-full bg-red-500" /> High
+  return L.divIcon({
+    className: 'custom-pump-marker',
+    html: `
+      <div class="relative w-8 h-8 flex items-center justify-center">
+        <div class="absolute inset-0 ${colorClass} rounded-full opacity-20 animate-ping"></div>
+        <div class="relative w-6 h-6 ${colorClass} rounded-full border-2 border-zinc-900 shadow-lg flex items-center justify-center flex-col">
+          <span class="text-[10px]">⛽</span>
         </div>
       </div>
-    </div>
-  );
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
 };
 
-export default Map;
+export default function Map() {
+  // Center of Delhi
+  const center = [28.6139, 77.2090];
+
+  return (
+    <div className="w-full h-[400px] lg:h-[500px] rounded-2xl overflow-hidden border border-zinc-800 relative z-0">
+      <MapContainer
+        center={center}
+        zoom={11}
+        scrollWheelZoom={false}
+        className="w-full h-full"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        
+        {pumps.map((pump) => (
+          <Marker 
+            key={pump.id} 
+            position={[pump.lat, pump.lng]}
+            icon={createPumpIcon(pump.status, pump.crowdLevel)}
+          >
+            <Popup className="custom-popup">
+              <div className="bg-zinc-900 text-white rounded-xl p-1 w-48 border border-zinc-800 custom-popup-content">
+                <div className="flex items-start justify-between mb-2 pb-2 border-b border-zinc-800/50">
+                  <h3 className="font-semibold text-sm leading-tight text-white">{pump.name}</h3>
+                  <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${pump.status === 'open' ? 'bg-fuel-green' : 'bg-red-500'}`}></div>
+                </div>
+                
+                <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{pump.address}</p>
+                
+                <div className="flex justify-between items-center text-xs mb-3">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-500 text-[10px] uppercase">Wait</span>
+                    <span className="font-medium text-white">{pump.waitingTime}m</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-zinc-500 text-[10px] uppercase">Price</span>
+                    <span className="font-medium text-white">₹{pump.price}</span>
+                  </div>
+                </div>
+                
+                <a 
+                  href={`/pump/${pump.id}`}
+                  className="block w-full text-center bg-fuel-green/10 hover:bg-fuel-green/20 text-fuel-green text-xs font-medium py-2 rounded-lg transition-colors border border-fuel-green/20"
+                >
+                  View Details
+                </a>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+}
